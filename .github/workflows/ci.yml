@@ -152,6 +152,14 @@ coverage:
           coverage.xml
           coverage.html
 
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: coverage.xml  # или coverage.info, gcovr XML и т.д.
+        flags: unittests
+        name: codecov-report
+        fail_ci_if_error: true
+
   precommit:
     runs-on: ubuntu-latest
     steps:
