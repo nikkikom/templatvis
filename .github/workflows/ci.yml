@@ -135,7 +135,7 @@ coverage:
       run: ctest --test-dir build-cov --output-on-failure
 
     # Генерация отчётов gcovr
-    - name: Generate coverage (gcovr: HTML + Cobertura XML)
+    - name: "Generate coverage (gcovr: HTML + Cobertura XML)"
       run: |
         gcovr -r . build-cov \
           --exclude '.*_deps/.*' \
@@ -144,6 +144,7 @@ coverage:
           --print-summary \
           --xml-pretty --output coverage.xml \
           --html --html-details --output coverage.html
+  
     - name: Upload coverage artifacts
       uses: actions/upload-artifact@v4
       with:
