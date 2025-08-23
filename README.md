@@ -4,7 +4,7 @@
 [![UBSan](https://github.com/nikkikom/templatvis/actions/workflows/ci.yml/badge.svg?event=push&job=ubsan-job)](https://github.com/nikkikom/templatvis/actions/workflows/ci.yml)
 [![TSan](https://github.com/nikkikom/templatvis/actions/workflows/ci.yml/badge.svg?event=push&job=tsan-job)](https://github.com/nikkikom/templatvis/actions/workflows/ci.yml)
 [![Clang-18](https://img.shields.io/badge/clang-18-blue)](#)
-[![Coverage](https://codecov.io/gh/nikkikom/templatvis/branch/main/graph/badge.svg)](https://codecov.io/gh/nikkikom/templatvis)
+[![Coverage](https://codecov.io/gh/nikkikom/templatvis/branch/master/graph/badge.svg)](https://codecov.io/gh/nikkikom/templatvis)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg)](https://nikkikom.github.io/templatvis/)
 
 # templatvis4 — шаблонная видимость (3 кейса)
