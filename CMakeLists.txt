@@ -142,6 +142,20 @@ set(TEMPLATE_EXPORT_INLINE_DTOR ${DEMO_INLINE_DTOR} CACHE BOOL "Inline dtor for 
 set(INST_EXPORT_INLINE_DTOR ${DEMO_INLINE_DTOR} CACHE BOOL "Inline dtor for inst_export")
 set(ALL_EXPORT_INLINE_DTOR ${DEMO_INLINE_DTOR} CACHE BOOL "Inline dtor for all_export")
 
+# ---- common (shared) ----
+option(COMMON_INLINE_DTOR "Inline destructor for common::Base" OFF)
+
+add_library(common SHARED src/common.cpp)
+target_include_directories(common PUBLIC
+  $<BUILD_INTERFACE:${PROJ_INC}>
+  $<INSTALL_INTERFACE:include>)
+target_compile_definitions(common PRIVATE COMMON_BUILD=1)
+if(COMMON_INLINE_DTOR)
+  target_compile_definitions(common PUBLIC COMMON_INLINE_DTOR=1)
+endif()
+set_target_properties(common PROPERTIES OUTPUT_NAME "common")
+setup_target_common(common)
+
 function(add_case name ON_TMPL ON_EXT ON_INST INLINE_DTOR)
   set(case_name demo_${name})
   add_library(${case_name} SHARED src/vec.cpp)
@@ -155,6 +169,7 @@ function(add_case name ON_TMPL ON_EXT ON_INST INLINE_DTOR)
     DEMO_EXPORT_ON_INSTANTIATION=${ON_INST}
     DEMO_INLINE_DTOR=${INLINE_DTOR}
   )
+  target_link_libraries(${case_name} PRIVATE common)
   set_target_properties(${case_name} PROPERTIES OUTPUT_NAME "${case_name}")
   setup_target_common(${case_name})
 
@@ -164,14 +179,14 @@ function(add_case name ON_TMPL ON_EXT ON_INST INLINE_DTOR)
     $<BUILD_INTERFACE:${PROJ_INC}>
     $<INSTALL_INTERFACE:include>)
   target_compile_definitions(${throw_name} PRIVATE THROWERS_BUILD=1 DEMO_INLINE_DTOR=${INLINE_DTOR})
-  target_link_libraries(${throw_name} PRIVATE ${case_name})
+  target_link_libraries(${throw_name} PRIVATE ${case_name} common)
   set_target_properties(${throw_name} PROPERTIES OUTPUT_NAME "${throw_name}")
   setup_target_common(${throw_name})
 
   set(main_name main_${name})
   add_executable(${main_name} src/main.cpp)
   target_include_directories(${main_name} PRIVATE ${PROJ_INC})
-  target_link_libraries(${main_name} PRIVATE ${throw_name} ${case_name})
+  target_link_libraries(${main_name} PRIVATE ${throw_name} ${case_name} common)
   set_target_properties(${main_name} PROPERTIES OUTPUT_NAME "${main_name}")
   setup_target_common(${main_name})
   apply_no_uuid_if_exe(${main_name})
@@ -220,6 +235,11 @@ install(EXPORT templatvis4Targets
         NAMESPACE templatvis4::
         FILE templatvis4Targets.cmake
         DESTINATION lib/cmake/templatvis4)
+
+install(TARGETS common EXPORT templatvis4Targets
+        RUNTIME DESTINATION bin COMPONENT bin
+        LIBRARY DESTINATION lib COMPONENT lib
+        ARCHIVE DESTINATION lib COMPONENT lib)
 
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Templatvis4Config.cmake.in
@@ -281,7 +301,8 @@ if(BUILD_TESTING)
   target_link_libraries(gtest_vis PRIVATE GTest::gtest_main
     demo_template_export throwers_template_export
     demo_inst_export throwers_inst_export
-    demo_all_export throwers_all_export)
+    demo_all_export throwers_all_export
+    common)
   setup_target_common(gtest_vis)
   include(GoogleTest)
   gtest_discover_tests(gtest_vis)
