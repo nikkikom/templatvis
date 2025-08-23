@@ -19,6 +19,9 @@ jobs:
         run: cmake --build build -j
       - name: Test (ctest)
         run: ctest --test-dir build --output-on-failure --build-config Release
+      - name: Size guard (Linux only)
+        if: runner.os == 'Linux'
+        run: bash scripts/size_guard.sh
       - name: Verify LC_UUID rules (macOS, only if APPLE_NO_UUID_FOR_EXE=ON)
         if: runner.os == 'macOS'
         run: |
@@ -37,10 +40,6 @@ jobs:
           else
             echo "APPLE_NO_UUID_FOR_EXE is OFF -> пропускаем проверку"
           fi
-
-      - name: Size guard
-        if: runner.os == 'Linux'
-        run: bash scripts/size_guard.sh
 
   asan-job:
     runs-on: ubuntu-latest
@@ -126,89 +125,87 @@ jobs:
           name: coverage-lcov
           path: coverage.info
 
+  precommit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pre-commit
+        run: pipx install pre-commit || python3 -m pip install --user pre-commit
+      - name: Run pre-commit
+        run: pre-commit run --all-files
 
-precommit:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - name: Install pre-commit
-      run: pipx install pre-commit || python3 -m pip install --user pre-commit
-    - name: Run pre-commit
-      run: pre-commit run --all-files
+  abi-compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Install libabigail
+        run: sudo apt-get update && sudo apt-get install -y abigail-tools
+      - name: Build current
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j
+          bash scripts/abi_dump.sh build
+      - name: Build previous (main) for diff
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: |
+          git fetch origin main:refs/remotes/origin/main || true
+          git checkout -q --detach origin/main || true
+          cmake -S . -B build-prev -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-prev -j
+          bash scripts/abi_dump.sh build-prev
+      - name: ABI diff
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: bash scripts/abi_diff.sh build build-prev
+      - name: Upload ABI dumps
+        uses: actions/upload-artifact@v4
+        with:
+          name: abi-dumps
+          path: abi/**
 
-abi-compare:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - uses: seanmiddleditch/gha-setup-ninja@v5
-    - name: Install libabigail
-      run: sudo apt-get update && sudo apt-get install -y abigail-tools
-    - name: Build current
-      run: |
-        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-        cmake --build build -j
-        bash scripts/abi_dump.sh build
-    - name: Build previous (main) for diff
-      if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
-      run: |
-        git fetch origin main:refs/remotes/origin/main || true
-        git checkout -q --detach origin/main || true
-        cmake -S . -B build-prev -G Ninja -DCMAKE_BUILD_TYPE=Release
-        cmake --build build-prev -j
-        bash scripts/abi_dump.sh build-prev
-    - name: ABI diff
-      if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
-      run: bash scripts/abi_diff.sh build build-prev
-    - name: Upload ABI dumps
-      uses: actions/upload-artifact@v4
-      with:
-        name: abi-dumps
-        path: abi/**
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Build bench
+        run: |
+          cmake -S . -B build-bench -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_BENCH=ON
+          cmake --build build-bench -j
+      - name: Run bench (short)
+        run: ./build-bench/bench_vec --benchmark_min_time=0.05
 
-bench:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: seanmiddleditch/gha-setup-ninja@v5
-    - name: Build bench
-      run: |
-        cmake -S . -B build-bench -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_BENCH=ON
-        cmake --build build-bench -j
-    - name: Run bench (short)
-      run: ./build-bench/bench_vec --benchmark_min_time=0.05
+  fuzz-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Install clang
+        run: sudo apt-get update && sudo apt-get install -y clang
+      - name: Build fuzz target
+        run: |
+          cmake -S . -B build-fuzz -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
+          cmake --build build-fuzz -j
+      - name: Smoke fuzz 15s
+        run: ./build-fuzz/fuzz_vec -max_total_time=15 || true
 
-fuzz-build:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: seanmiddleditch/gha-setup-ninja@v5
-    - name: Install clang
-      run: sudo apt-get update && sudo apt-get install -y clang
-    - name: Build fuzz target
-      run: |
-        cmake -S . -B build-fuzz -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
-        cmake --build build-fuzz -j
-    - name: Smoke fuzz 15s
-      run: ./build-fuzz/fuzz_vec -max_total_time=15 || true
-
-
-clang-llvm:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: seanmiddleditch/gha-setup-ninja@v5
-    - name: Install LLVM 18
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget gnupg lsb-release
-        wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-        chmod +x /tmp/llvm.sh
-        sudo /tmp/llvm.sh 18
-    - name: Configure (clang-18)
-      run: cmake -S . -B build-clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_WERROR=ON
-    - name: Build
-      run: cmake --build build-clang -j
-    - name: Test
-      run: ctest --test-dir build-clang --output-on-failure
+  clang-llvm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Install LLVM 18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release
+          wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 18
+      - name: Configure (clang-18)
+        run: cmake -S . -B build-clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_WERROR=ON
+      - name: Build
+        run: cmake --build build-clang -j
+      - name: Test
+        run: ctest --test-dir build-clang --output-on-failure
