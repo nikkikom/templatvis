@@ -5,9 +5,9 @@ namespace common {
 struct COMMON_API Base {
   virtual ~Base()
 #if defined(COMMON_INLINE_DTOR)
-    = default;   // inline
+      = default; // inline
 #else
-    ;            // out-of-line
+      ; // out-of-line // NOLINT(whitespace/semicolon)
 #endif
 };
 } // namespace common

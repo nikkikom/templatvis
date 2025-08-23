@@ -6,3 +6,21 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 SortIncludes: true
 SpaceBeforeParens: ControlStatements
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex: '^"tests/test_gtest\.h"$'   # related header
+    Priority: 1
+  - Regex: '^<[^/]+\.h>$'              # C system headers: <stdio.h>, <stdint.h>, ...
+    Priority: 2
+  - Regex: '^<gtest/.*>$'              # gtest как "other lib"
+    Priority: 3
+  - Regex: '^<.*>$'                    # прочие C++ system: <vector>, <string>, ...
+    Priority: 4
+  - Regex: '^"common/.*"$'             # наш проект
+    Priority: 5
+  - Regex: '^"demo/.*"$'
+    Priority: 6
+  - Regex: '^"throwers/.*"$'
+    Priority: 7
+  - Regex: '^".*"$'                    # любые оставшиеся
+    Priority: 8

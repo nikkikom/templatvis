@@ -3,7 +3,7 @@
 
 namespace demo {
 #if !DEMO_INLINE_DTOR
-template<> Vec<int>::~Vec() = default;
-template<> Vec<double>::~Vec() = default;
+template <> Vec<int>::~Vec() = default;
+template <> Vec<double>::~Vec() = default;
 #endif
 } // namespace demo

@@ -15,13 +15,12 @@ namespace demo {
 #endif
 
 #if DEMO_EXPORT_ON_TEMPLATE
-  #define DEMO_TMPL_EXPORT DEMO_EXPORT
+#define DEMO_TMPL_EXPORT DEMO_EXPORT
 #else
-  #define DEMO_TMPL_EXPORT
+#define DEMO_TMPL_EXPORT
 #endif
 
-template <class T>
-class DEMO_TMPL_EXPORT Vec : public common::Base {
+template <class T> class DEMO_TMPL_EXPORT Vec : public common::Base {
 public:
   Vec() : data_{} {}
   explicit Vec(T v) : data_{v} {}
@@ -35,24 +34,25 @@ public:
 #endif
   virtual T get() const { return data_; }
   void set(T v) { data_ = v; }
+
 private:
   T data_;
 };
 
 #ifdef DEMO_DO_INSTANTIATE
-  #define DEMO_EXTERN_KEY
-  #if DEMO_EXPORT_ON_INSTANTIATION
-    #define DEMO_LINE_EXPORT DEMO_EXPORT
-  #else
-    #define DEMO_LINE_EXPORT
-  #endif
+#define DEMO_EXTERN_KEY
+#if DEMO_EXPORT_ON_INSTANTIATION
+#define DEMO_LINE_EXPORT DEMO_EXPORT
 #else
-  #define DEMO_EXTERN_KEY extern
-  #if DEMO_EXPORT_ON_EXTERN
-    #define DEMO_LINE_EXPORT DEMO_EXPORT
-  #else
-    #define DEMO_LINE_EXPORT
-  #endif
+#define DEMO_LINE_EXPORT
+#endif
+#else
+#define DEMO_EXTERN_KEY extern
+#if DEMO_EXPORT_ON_EXTERN
+#define DEMO_LINE_EXPORT DEMO_EXPORT
+#else
+#define DEMO_LINE_EXPORT
+#endif
 #endif
 
 DEMO_EXTERN_KEY template class DEMO_LINE_EXPORT Vec<int>;
