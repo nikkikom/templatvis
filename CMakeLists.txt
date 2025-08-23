@@ -355,7 +355,7 @@ if(BUILD_FUZZ)
   add_executable(fuzz_vec fuzz/fuzz_vec.cpp)
   target_include_directories(fuzz_vec PRIVATE ${PROJ_INC})
   target_compile_definitions(fuzz_vec PRIVATE DEMO_INLINE_DTOR=1)
-  target_link_libraries(fuzz_vec PRIVATE demo_all_export)
+  target_link_libraries(fuzz_vec PRIVATE demo_all_export common)
 
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(fuzz_vec PRIVATE -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
