@@ -116,28 +116,41 @@ jobs:
       - name: Run valgrind
         run: bash scripts/valgrind.sh
 
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: seanmiddleditch/gha-setup-ninja@v5
-      - name: Install lcov
-        run: sudo apt-get update && sudo apt-get install -y lcov
-      - name: Configure (coverage)
-        run: cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
-      - name: Build
-        run: cmake --build build-cov -j
-      - name: Test
-        run: ctest --test-dir build-cov --output-on-failure
-      - name: Collect coverage
-        run: |
-          lcov --directory build-cov --capture --output-file coverage.info --ignore-errors mismatch
-          lcov --remove coverage.info '/usr/*' '*/tests/*' '*/_deps/*' --output-file coverage.info
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-lcov
-          path: coverage.info
+coverage:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: seanmiddleditch/gha-setup-ninja@v5
+
+    # Установить gcovr
+    - name: Install gcovr
+      run: sudo apt-get update && sudo apt-get install -y gcovr
+
+    # Сборка с покрытием (GCC; для Clang см. ниже)
+    - name: Configure (coverage)
+      run: cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+    - name: Build
+      run: cmake --build build-cov -j
+    - name: Test
+      run: ctest --test-dir build-cov --output-on-failure
+
+    # Генерация отчётов gcovr
+    - name: Generate coverage (gcovr: HTML + Cobertura XML)
+      run: |
+        gcovr -r . build-cov \
+          --exclude '.*_deps/.*' \
+          --exclude '.*googletest.*/.*' \
+          --exclude '.*tests/.*' \
+          --print-summary \
+          --xml-pretty --output coverage.xml \
+          --html --html-details --output coverage.html
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-gcovr
+        path: |
+          coverage.xml
+          coverage.html
 
   precommit:
     runs-on: ubuntu-latest
