@@ -116,23 +116,49 @@ jobs:
       - name: Run valgrind
         run: bash scripts/valgrind.sh
 
-coverage:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
-    - uses: seanmiddleditch/gha-setup-ninja@v5
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@v5
 
-    # Установить gcovr
-    - name: Install gcovr
-      run: sudo apt-get update && sudo apt-get install -y gcovr
+      # Установить gcovr
+      - name: Install gcovr
+        run: sudo apt-get update && sudo apt-get install -y gcovr
 
-    # Сборка с покрытием (GCC; для Clang см. ниже)
-    - name: Configure (coverage)
-      run: cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
-    - name: Build
-      run: cmake --build build-cov -j
-    - name: Test
-      run: ctest --test-dir build-cov --output-on-failure
+      # Сборка с покрытием (GCC; для Clang см. ниже)
+      - name: Configure (coverage)
+        run: cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+      - name: Build
+        run: cmake --build build-cov -j
+      - name: Test
+        run: ctest --test-dir build-cov --output-on-failure
+
+      - name: "Generate coverage (gcovr: HTML + Cobertura XML)"
+        run: |
+          gcovr -r . build-cov \
+            --exclude '.*_deps/.*' \
+            --exclude '.*googletest.*/.*' \
+            --exclude '.*tests/.*' \
+            --print-summary \
+            --xml-pretty --output coverage.xml \
+            --html --html-details --output coverage.html
+    
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gcovr
+          path: |
+            coverage.xml
+            coverage.html
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml  # или coverage.info, gcovr XML и т.д.
+          flags: unittests
+          name: codecov-report
+          fail_ci_if_error: true
 
   precommit:
     runs-on: ubuntu-latest
