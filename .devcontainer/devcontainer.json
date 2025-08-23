@@ -1,0 +1,26 @@
+{
+  "name": "templatvis4",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "features": {},
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "ms-vscode.cpptools",
+        "xaver.clang-format",
+        "vadimcn.vscode-lldb",
+        "github.vscode-github-actions",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=${localWorkspaceFolder}/,target=/workspaces/templatvis4,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "git config --global --add safe.directory /workspaces/templatvis4 && pre-commit install || true"
+}

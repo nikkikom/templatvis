@@ -1,0 +1,25 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_WERROR=ON
+      - name: Build
+        run: cmake --build build -j
+      - name: Install prefix
+        run: cmake --install build --prefix "$PWD/_install"
+      - name: Package
+        run: cpack --config build/CPackConfig.cmake -G ZIP
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-zips
+          path: |
+            build/*.zip
+            build/_CPack_Packages/**/ZIP/*.zip

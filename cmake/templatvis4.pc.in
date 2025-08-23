@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: templatvis4
+Description: Template visibility demo with 3 cases
+Version: @CPACK_PACKAGE_VERSION_MAJOR@.@CPACK_PACKAGE_VERSION_MINOR@.@CPACK_PACKAGE_VERSION_PATCH@
+Cflags: -I${includedir}
+Libs: -L${libdir} -ldemo_template_export -lthrowers_template_export -ldemo_inst_export -lthrowers_inst_export -ldemo_all_export -lthrowers_all_export
