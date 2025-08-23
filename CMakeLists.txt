@@ -351,7 +351,7 @@ endif()
 
 # ---- CPack ----
 set(CPACK_PACKAGE_NAME "templatvis4")
-set(CPACK_PACKAGE_VENDOR "templatvis")
+set(CPACK_PACKAGE_VENDOR "nikkikom")
 set(CPACK_PACKAGE_CONTACT "noreply@example.com")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Template visibility demo (3 cases)")
 set(CPACK_PACKAGE_VERSION_MAJOR 1)
