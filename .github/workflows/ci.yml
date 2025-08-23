@@ -118,8 +118,8 @@ jobs:
         run: ctest --test-dir build-cov --output-on-failure
       - name: Collect coverage
         run: |
-          lcov --directory build-cov --capture --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' --output-file coverage.info
+          lcov --directory build-cov --capture --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/tests/*' '*/_deps/*' --output-file coverage.info
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
