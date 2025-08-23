@@ -25,21 +25,34 @@ jobs:
         run: bash scripts/size_guard.sh
       - name: Verify LC_UUID rules (macOS, only if APPLE_NO_UUID_FOR_EXE=ON)
         if: runner.os == 'macOS'
+        shell: bash
         run: |
           if grep -q "APPLE_NO_UUID_FOR_EXE:BOOL=ON" build/CMakeCache.txt; then
             echo "APPLE_NO_UUID_FOR_EXE is ON -> проверяем LC_UUID"
+
+            # У исполняемых файлов LC_UUID быть НЕ должно
             for exe in main_template_export main_inst_export main_all_export; do
               echo "Check no LC_UUID in $exe"
-              otool -l build/$exe | ! grep LC_UUID
+              if otool -l "build/$exe" | grep -q LC_UUID; then
+                echo "ERROR: LC_UUID found in $exe"
+                exit 1
+              fi
             done
-            for lib in libdemo_template_export.dylib libthrowers_template_export.dylib \
-                       libdemo_inst_export.dylib libthrowers_inst_export.dylib \
-                       libdemo_all_export.dylib libthrowers_all_export.dylib; do
+
+            # У библиотек LC_UUID ДОЛЖЕН быть
+            for lib in \
+              libdemo_template_export.dylib libthrowers_template_export.dylib \
+              libdemo_inst_export.dylib      libthrowers_inst_export.dylib \
+              libdemo_all_export.dylib       libthrowers_all_export.dylib
+            do
               echo "Check LC_UUID exists in $lib"
-              otool -l build/$lib | grep LC_UUID
+              if ! otool -l "build/$lib" | grep -q LC_UUID; then
+                echo "ERROR: LC_UUID missing in $lib"
+                exit 1
+              fi
             done
           else
-            echo "APPLE_NO_UUID_FOR_EXE is OFF -> пропускаем проверку"
+            echo "APPLE_NO_UUID_FOR_EXE is OFF -> skip LC_UUID check"
           fi
 
   asan-job:
