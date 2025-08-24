@@ -166,7 +166,8 @@ jobs:
 
       - name: Install WiX Toolset
         uses: crazy-max/ghaction-chocolatey@v3
-      - run: choco install wixtoolset --no-progress
+        with:
+          args: install wixtoolset --no-progress -y
 
       - name: Configure (Release)
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
