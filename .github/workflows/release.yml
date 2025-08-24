@@ -68,6 +68,130 @@ jobs:
             build/pack/*.tar.gz
           if-no-files-found: error
 
+  package-linux:
+    name: "Package (Linux: DEB & RPM)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm dpkg-dev fakeroot cpack || true
+          # cpack обычно идёт с cmake, оставим на случай старых образов
+
+      - name: Configure (Release)
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Install to staging
+        run: cmake --install build --prefix "$PWD/stage"
+
+      - name: Package (DEB & RPM)
+        working-directory: build
+        run: |
+          cpack -G DEB -B "$PWD/pack"
+          cpack -G RPM -B "$PWD/pack"
+
+      - name: List packages
+        run: ls -lh build/pack || true
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-linux
+          path: |
+            build/pack/*.deb
+            build/pack/*.rpm
+          if-no-files-found: error
+
+  package-macos:
+    name: "Package (macOS: DMG)"
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Configure (Release)
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Install to staging
+        run: cmake --install build --prefix "$PWD/stage"
+
+      - name: Package (DMG)
+        working-directory: build
+        run: cpack -G DragNDrop -B "$PWD/pack"
+
+      - name: List packages
+        run: ls -lh build/pack || true
+
+      - name: Upload macOS packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-macos
+          path: build/pack/*.dmg
+          if-no-files-found: error
+
+  package-windows:
+    name: "Package (Windows: MSI via WiX)"
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Install WiX Toolset
+        uses: crazy-max/ghaction-chocolatey@v3
+      - run: choco install wixtoolset --no-progress
+
+      - name: Configure (Release)
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_IPO=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Install to staging
+        run: cmake --install build --prefix "${{ github.workspace }}\\stage"
+
+      - name: Package (MSI)
+        working-directory: build
+        run: cpack -G WIX -B "$PWD/pack"
+
+      - name: List packages
+        shell: bash
+        run: ls -lh build/pack || true
+
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-windows
+          path: build/pack/*.msi
+          if-no-files-found: error
+
   publish:
     name: Create GitHub Release
     needs: build-release
@@ -89,4 +213,8 @@ jobs:
           files: |
             dist/**/*.zip
             dist/**/*.tar.gz
+            dist/**/*.deb
+            dist/**/*.rpm
+            dist/**/*.dmg
+            dist/**/*.msi
           generate_release_notes: true

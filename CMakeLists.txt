@@ -227,12 +227,43 @@ string(CONCAT CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-"
 set(CPACK_PACKAGE_VENDOR "nikkikom")
 set(CPACK_PACKAGE_CONTACT "n/a")
 
-# Генераторы: zip/tgz везде (NSIS добавляйте при наличии)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Template visibility demo")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/nikkikom/templatvis")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+
 if(WIN32)
-  set(CPACK_GENERATOR "ZIP;NSIS")
+  # MSI требует WiX (см. ниже), NSIS — альтернативно
+  set(CPACK_GENERATOR "ZIP;WIX;NSIS") # или "NSIS"
+elseif(APPLE)
+  set(CPACK_GENERATOR "TGZ;DragNDrop") # .dmg
 else()
-  set(CPACK_GENERATOR "ZIP;TGZ")
+  set(CPACK_GENERATOR "TGZ;DEB;RPM") # .deb и .rpm
 endif()
+
+# --- Debian/Ubuntu (.deb) ---
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT) # стандартное имя
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "nikkikom")
+# зависимости (пример): set(CPACK_DEBIAN_PACKAGE_DEPENDS "libstdc++6, libc6 (>=
+# 2.28)")
+
+# --- RPM (Fedora/RHEL) ---
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+# пример зависимостей: set(CPACK_RPM_PACKAGE_REQUIRES "libstdc++ >= 8, glibc >=
+# 2.28")
+
+# --- macOS (.dmg) ---
+set(CPACK_DMG_VOLUME_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
+set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK ON)
+# Можно упаковать .app, если делаешь bundle (для CLI достаточно bin/lib/include)
+
+# --- Windows (MSI/NSIS) ---
+# Для WIX:
+set(CPACK_WIX_LICENSE_RTF "${CMAKE_SOURCE_DIR}/cmake/wix/LICENSE.rtf"
+)# опционально
+set(CPACK_WIX_UPGRADE_GUID "0D22BD85-590A-499C-A23A-19315EED2B01")
+
+# Для NSIS:
+set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
 
 # показывать только нужные компоненты
 set(CPACK_COMPONENTS_ALL bin;lib;dev)
