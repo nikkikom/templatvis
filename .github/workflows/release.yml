@@ -182,6 +182,21 @@ jobs:
         working-directory: build
         run: cpack -G WIX -B "$PWD/pack"
 
+      - name: Show WiX log on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          $log = "build/pack/_CPack_Packages/win64/WIX/wix.log"
+          if (Test-Path $log) { Get-Content $log -Raw | Write-Host } else { Write-Host "wix.log not found" }
+
+      - name: Upload WiX logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wix-log
+          path: build/pack/_CPack_Packages/win64/WIX/wix.log
+          if-no-files-found: ignore
+
       - name: List packages
         shell: bash
         run: ls -lh build/pack || true
