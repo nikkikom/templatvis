@@ -246,14 +246,21 @@ jobs:
           echo "Artifacts:"
           find dist -type f -maxdepth 3 -print
 
-      - name: Extract minor version
+      - name: Extract version and parity
         id: version
+        shell: bash
         run: |
+          # Срезаем префикс 'v' у тега (refs/tags/vX.Y.Z)
           VER="${GITHUB_REF_NAME#v}"
-          echo "full=$VER" >> $GITHUB_OUTPUT
-          MINOR=$(echo "$VER" | cut -d. -f2)
-          echo "minor=$MINOR" >> $GITHUB_OUTPUT
-          echo "Detected version=$VER, minor=$MINOR"
+          MINOR="$(echo "$VER" | cut -d. -f2)"
+          echo "full=$VER"   >> "$GITHUB_OUTPUT"
+          echo "minor=$MINOR" >> "$GITHUB_OUTPUT"
+          if [ -n "$MINOR" ] && [ $((MINOR % 2)) -eq 0 ]; then
+            echo "is_even=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_even=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Detected version=$VER, minor=$MINOR, is_even=$(grep is_even= "$GITHUB_OUTPUT" | cut -d= -f2)"
 
       - name: Create GitHub Release and upload assets
         if: startsWith(github.ref, 'refs/tags/')
@@ -267,4 +274,4 @@ jobs:
             dist/**/*.dmg
             dist/**/*.msi
           generate_release_notes: true
-          prerelease: ${{ fromJSON(steps.version.outputs.minor) % 2 == 0 }}
+          prerelease: ${{ steps.version.outputs.is_even == 'true' }}
