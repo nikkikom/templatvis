@@ -135,10 +135,6 @@ if(POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
 
-configure_file(${CMAKE_SOURCE_DIR}/cmake/version.hpp.in
-               ${CMAKE_BINARY_DIR}/generated/version.hpp @ONLY)
-target_include_directories(common PUBLIC ${CMAKE_BINARY_DIR}/generated)
-
 # ----- helper applied to every target (PCH/Unity etc.)
 if(NOT COMMAND setup_target_common)
   # setup_target_common(tgt) Applies PCH/Unity flags to the given target.
@@ -192,11 +188,66 @@ set(ALL_EXPORT_INLINE_DTOR
     ${DEMO_INLINE_DTOR}
     CACHE BOOL "Inline dtor for all_export")
 
+# ---------- Versioning ----------
+# Попробовать взять версию из git-тега (v<semver>), иначе fallback
+set(_proj_ver "0.0.0")
+find_package(Git QUIET)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" describe --tags --match
+            "v[0-9]*" --dirty --always
+    OUTPUT_VARIABLE GIT_DESC
+    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  # ожидаем что-то вроде v1.2.3[-rc][+dirty]
+  if(GIT_DESC MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9].*)")
+    string(REGEX REPLACE "^v" "" _proj_ver "${GIT_DESC}")
+  else()
+    # нет тегов — используем короткий SHA
+    execute_process(
+      COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short=7
+              HEAD
+      OUTPUT_VARIABLE GIT_SHA
+      OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    set(_proj_ver "0.0.0+g${GIT_SHA}")
+  endif()
+endif()
+
+set(CPACK_PACKAGE_VERSION "${_pkg_ver}")
+
+# ---------- CPack clean names ----------
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+# Единый шаблон имени файла: templatvis4-<version>-<os>-<arch>.<ext>
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-"
+                            "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+
+# (опционально) человекочитаемые поля
+set(CPACK_PACKAGE_VENDOR "nikkikom")
+set(CPACK_PACKAGE_CONTACT "n/a")
+
+# Генераторы: zip/tgz везде (NSIS добавляйте при наличии)
+if(WIN32)
+  set(CPACK_GENERATOR "ZIP;NSIS")
+else()
+  set(CPACK_GENERATOR "ZIP;TGZ")
+endif()
+
+if(NOT DEFINED CPack_CMake_INCLUDED)
+  include(CPack)
+endif()
+
+set(GENERATED_INC "${CMAKE_BINARY_DIR}/include")
+file(MAKE_DIRECTORY "${GENERATED_INC}")
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hpp.in"
+               "${GENERATED_INC}/version.hpp" @ONLY)
+
 # ---- common (shared) ----
 option(COMMON_INLINE_DTOR "Inline destructor for common::Base" OFF)
 
 add_library(common SHARED src/common.cpp)
 target_include_directories(common PUBLIC $<BUILD_INTERFACE:${PROJ_INC}>
+                                         $<INSTALL_INTERFACE:include>)
+target_include_directories(common PUBLIC $<BUILD_INTERFACE:${GENERATED_INC}>
                                          $<INSTALL_INTERFACE:include>)
 target_compile_definitions(common PRIVATE COMMON_BUILD=1)
 if(COMMON_INLINE_DTOR)
@@ -326,6 +377,8 @@ install(
   DESTINATION lib/pkgconfig
   COMPONENT dev)
 
+install(FILES "${GENERATED_INC}/version.hpp" DESTINATION include)
+
 # ---- Benchmarks ----
 if(BUILD_BENCH)
   include(FetchContent)
@@ -386,53 +439,6 @@ if(BUILD_TESTING)
   add_test(NAME run_main_template COMMAND main_template_export)
   add_test(NAME run_main_inst COMMAND main_inst_export)
   add_test(NAME run_main_all COMMAND main_all_export)
-endif()
-
-# ---------- Versioning ----------
-# Попробовать взять версию из git-тега (v<semver>), иначе fallback
-set(_proj_ver "0.0.0")
-find_package(Git QUIET)
-if(GIT_FOUND)
-  execute_process(
-    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" describe --tags --match
-            "v[0-9]*" --dirty --always
-    OUTPUT_VARIABLE GIT_DESC
-    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-  # ожидаем что-то вроде v1.2.3[-rc][+dirty]
-  if(GIT_DESC MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9].*)")
-    string(REGEX REPLACE "^v" "" _proj_ver "${GIT_DESC}")
-  else()
-    # нет тегов — используем короткий SHA
-    execute_process(
-      COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short=7
-              HEAD
-      OUTPUT_VARIABLE GIT_SHA
-      OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    set(_proj_ver "0.0.0+g${GIT_SHA}")
-  endif()
-endif()
-
-set(CPACK_PACKAGE_VERSION "${_pkg_ver}")
-
-# ---------- CPack clean names ----------
-set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
-# Единый шаблон имени файла: templatvis4-<version>-<os>-<arch>.<ext>
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-"
-                            "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
-
-# (опционально) человекочитаемые поля
-set(CPACK_PACKAGE_VENDOR "nikkikom")
-set(CPACK_PACKAGE_CONTACT "n/a")
-
-# Генераторы: zip/tgz везде (NSIS добавляйте при наличии)
-if(WIN32)
-  set(CPACK_GENERATOR "ZIP;NSIS")
-else()
-  set(CPACK_GENERATOR "ZIP;TGZ")
-endif()
-
-if(NOT DEFINED CPack_CMake_INCLUDED)
-  include(CPack)
 endif()
 
 # Deterministic builds (best-effort): strip absolute paths from debug info
