@@ -212,7 +212,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: packages-windows
-          path: build/pack/*.msi
+          path: ${{ steps.pack.outputs.path }}
           if-no-files-found: error
 
   publish:
