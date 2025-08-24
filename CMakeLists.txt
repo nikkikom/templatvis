@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
-# ---- Версия проекта из git ----
-set(_proj_ver "0.0.0")
+# ---- Version from git ----
+set(_proj_ver "0.0.0") # для project(): только цифры с точками
+set(_pkg_ver "0.0.0") # для пакетов/CPack: можно с суффиксами
 
 find_package(Git QUIET)
 if(GIT_FOUND)
@@ -10,16 +11,24 @@ if(GIT_FOUND)
             "v[0-9]*" --dirty --always
     OUTPUT_VARIABLE GIT_DESC
     OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-
-  if(GIT_DESC MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9]+.*)")
-    string(REGEX REPLACE "^v" "" _proj_ver "${GIT_DESC}")
+  # Примеры: v1.2.3 v1.2.3-rc1 v1.2.3-5-gabcdef0 v1.2.3-dirty gabcdef0
+  if(GIT_DESC MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
+    # чистый семвер-тег
+    set(_proj_ver "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
+    string(SUBSTRING "${GIT_DESC}" 1 -1 _pkg_ver) # "v1.2.3" -> "1.2.3"
+  elseif(GIT_DESC MATCHES "^v([0-9]+)\\.([0-9]+)\\.([0-9]+).*")
+    # тег есть, но с хвостом (-rcN, -dirty, -gsha …)
+    set(_proj_ver "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}.${CMAKE_MATCH_3}")
+    string(SUBSTRING "${GIT_DESC}" 1 -1 _pkg_ver) # "v1.2.3-rc1" -> "1.2.3-rc1"
   else()
+    # нет тегов → fallback на 0.0.0 + короткий sha
     execute_process(
       COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short=7
               HEAD
       OUTPUT_VARIABLE GIT_SHA
       OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    set(_proj_ver "0.0.0+g${GIT_SHA}")
+    set(_proj_ver "0.0.0")
+    set(_pkg_ver "0.0.0+g${GIT_SHA}")
   endif()
 endif()
 
@@ -403,13 +412,7 @@ if(GIT_FOUND)
   endif()
 endif()
 
-# Если проект уже объявлен с VERSION — не трогаем PROJECT_VERSION но для CPack
-# зададим CPACK_PACKAGE_VERSION всегда:
-if(DEFINED PROJECT_VERSION)
-  set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-else()
-  set(CPACK_PACKAGE_VERSION "${_proj_ver}")
-endif()
+set(CPACK_PACKAGE_VERSION "${_pkg_ver}")
 
 # ---------- CPack clean names ----------
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
