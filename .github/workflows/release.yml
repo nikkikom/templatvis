@@ -186,8 +186,24 @@ jobs:
           pandoc -s -o cmake\wix\LICENSE.rtf LICENSE
 
       - name: Package (MSI)
+        id: pack
         working-directory: build
-        run: cpack -G WIX -B "$PWD/pack"
+        shell: pwsh
+        run: |
+          cpack -G WIX -B "$PWD/pack"
+          $msi = Get-ChildItem -Path "$PWD\pack" -Filter *.msi -Recurse -ErrorAction SilentlyContinue |
+                 Select-Object -First 1 -ExpandProperty FullName
+          if (-not $msi) {
+            $msi = Get-ChildItem -Path "$PWD\_CPack_Packages\win64\WIX" -Filter *.msi -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $msi) {
+            Write-Host "MSI not found after cpack."
+            exit 1
+          }
+          Write-Host "Found MSI: $msi"
+          # ВАЖНО: объявляем output с именем msi_path
+          "msi_path=$msi" >> $env:GITHUB_OUTPUT
 
       - name: Show WiX log on failure
         if: failure()
@@ -212,7 +228,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: packages-windows
-          path: build/pack/*.msi
+          path: ${{ steps.pack.outputs.msi_path }}
           if-no-files-found: error
 
   publish:
