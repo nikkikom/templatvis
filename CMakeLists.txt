@@ -234,6 +234,12 @@ else()
   set(CPACK_GENERATOR "ZIP;TGZ")
 endif()
 
+# показывать только нужные компоненты
+set(CPACK_COMPONENTS_ALL bin;lib;dev)
+# скрыть лишние (если всё же существуют)
+set(CPACK_COMPONENT_TESTS_HIDDEN TRUE)
+set(CPACK_COMPONENT_THIRDPARTY_HIDDEN TRUE)
+
 if(NOT DEFINED CPack_CMake_INCLUDED)
   include(CPack)
 endif()
@@ -308,7 +314,7 @@ foreach(name IN ITEMS template_export inst_export all_export)
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib)
-  install(TARGETS main_${name} RUNTIME DESTINATION bin)
+  install(TARGETS main_${name} RUNTIME DESTINATION bin COMPONENT bin)
 endforeach()
 
 # setup_target_common(tgt) Applies PCH/Unity flags to the given target.
@@ -380,7 +386,10 @@ install(
   DESTINATION lib/pkgconfig
   COMPONENT dev)
 
-install(FILES "${GENERATED_INC}/version.hpp" DESTINATION include)
+install(
+  FILES "${GENERATED_INC}/version.hpp"
+  DESTINATION include
+  COMPONENT dev)
 
 # ---- Benchmarks ----
 if(BUILD_BENCH)
@@ -420,6 +429,10 @@ if(BUILD_TESTING)
   set(gtest_force_shared_crt
       ON
       CACHE BOOL "Use shared CRT" FORCE)
+  set(INSTALL_GTEST
+      OFF
+      CACHE BOOL "" FORCE)
+  # set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)  #
   FetchContent_MakeAvailable(googletest)
 
   add_executable(gtest_vis tests/test_gtest.cpp)
