@@ -1,7 +1,33 @@
 cmake_minimum_required(VERSION 3.20)
 
-cmake_minimum_required(VERSION 3.20)
-project(templatvis4 LANGUAGES CXX)
+# ---- Версия проекта из git ----
+set(_proj_ver "0.0.0")
+
+find_package(Git QUIET)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" describe --tags --match
+            "v[0-9]*" --dirty --always
+    OUTPUT_VARIABLE GIT_DESC
+    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+
+  if(GIT_DESC MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9]+.*)")
+    string(REGEX REPLACE "^v" "" _proj_ver "${GIT_DESC}")
+  else()
+    execute_process(
+      COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short=7
+              HEAD
+      OUTPUT_VARIABLE GIT_SHA
+      OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    set(_proj_ver "0.0.0+g${GIT_SHA}")
+  endif()
+endif()
+
+# ---- Project ----
+project(
+  templatvis4
+  VERSION ${_proj_ver}
+  LANGUAGES CXX)
 
 # ---- Options ----
 option(ENABLE_WERROR "Treat warnings as errors" OFF)
@@ -349,27 +375,54 @@ if(BUILD_TESTING)
   add_test(NAME run_main_all COMMAND main_all_export)
 endif()
 
-# ---- CPack ----
-set(CPACK_PACKAGE_NAME "templatvis4")
+# ---------- Versioning ----------
+# Попробовать взять версию из git-тега (v<semver>), иначе fallback
+set(_proj_ver "0.0.0")
+find_package(Git QUIET)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" describe --tags --match
+            "v[0-9]*" --dirty --always
+    OUTPUT_VARIABLE GIT_DESC
+    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  # ожидаем что-то вроде v1.2.3[-rc][+dirty]
+  if(GIT_DESC MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9].*)")
+    string(REGEX REPLACE "^v" "" _proj_ver "${GIT_DESC}")
+  else()
+    # нет тегов — используем короткий SHA
+    execute_process(
+      COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_SOURCE_DIR}" rev-parse --short=7
+              HEAD
+      OUTPUT_VARIABLE GIT_SHA
+      OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    set(_proj_ver "0.0.0+g${GIT_SHA}")
+  endif()
+endif()
+
+# Если проект уже объявлен с VERSION — не трогаем PROJECT_VERSION но для CPack
+# зададим CPACK_PACKAGE_VERSION всегда:
+if(DEFINED PROJECT_VERSION)
+  set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+else()
+  set(CPACK_PACKAGE_VERSION "${_proj_ver}")
+endif()
+
+# ---------- CPack clean names ----------
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+# Единый шаблон имени файла: templatvis4-<version>-<os>-<arch>.<ext>
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-"
+                            "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+
+# (опционально) человекочитаемые поля
 set(CPACK_PACKAGE_VENDOR "nikkikom")
-set(CPACK_PACKAGE_CONTACT "noreply@example.com")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Template visibility demo (3 cases)")
-set(CPACK_PACKAGE_VERSION_MAJOR 1)
-set(CPACK_PACKAGE_VERSION_MINOR 0)
-set(CPACK_PACKAGE_VERSION_PATCH 0)
-set(CPACK_COMPONENTS_ALL bin lib dev)
-set(CPACK_COMPONENT_BIN_DEPENDS lib)
-set(CPACK_COMPONENT_DEV_DEPENDS lib)
+set(CPACK_PACKAGE_CONTACT "n/a")
+
+# Генераторы: zip/tgz везде (NSIS добавляйте при наличии)
 if(WIN32)
   set(CPACK_GENERATOR "ZIP;NSIS")
 else()
   set(CPACK_GENERATOR "ZIP;TGZ")
 endif()
-set(CPACK_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
-set(CPACK_PACKAGE_FILE_NAME
-    "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}."
-    "${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-"
-    "${CPACK_SYSTEM_NAME}")
 
 if(NOT DEFINED CPack_CMake_INCLUDED)
   include(CPack)
