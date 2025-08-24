@@ -192,9 +192,6 @@ jobs:
         run: |
           cpack -G WIX -B "$PWD/pack"
 
-          Get-ChildItem "$PWD\pack" -Filter *.zip -ErrorAction SilentlyContinue |
-            Remove-Item -Force -ErrorAction SilentlyContinue
-
           $msi = Get-ChildItem -Path "$PWD\pack" -Filter *.msi -Recurse -ErrorAction SilentlyContinue |
                  Select-Object -First 1 -ExpandProperty FullName
           if (-not $msi) {

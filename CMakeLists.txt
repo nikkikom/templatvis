@@ -233,7 +233,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 
 if(WIN32)
   # MSI требует WiX (см. ниже), NSIS — альтернативно
-  set(CPACK_GENERATOR "WIX") # или "NSIS"
+  set(CPACK_GENERATOR "ZIP;WIX") # или "NSIS"
 elseif(APPLE)
   set(CPACK_GENERATOR "TGZ;DragNDrop") # .dmg
 else()
