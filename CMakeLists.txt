@@ -126,6 +126,10 @@ if(POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+configure_file(${CMAKE_SOURCE_DIR}/cmake/version.hpp.in
+               ${CMAKE_BINARY_DIR}/generated/version.hpp @ONLY)
+target_include_directories(common PUBLIC ${CMAKE_BINARY_DIR}/generated)
+
 # ----- helper applied to every target (PCH/Unity etc.)
 if(NOT COMMAND setup_target_common)
   # setup_target_common(tgt) Applies PCH/Unity flags to the given target.
