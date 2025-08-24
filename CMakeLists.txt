@@ -217,8 +217,11 @@ set(CPACK_PACKAGE_VERSION "${_pkg_ver}")
 # ---------- CPack clean names ----------
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 # Единый шаблон имени файла: templatvis4-<version>-<os>-<arch>.<ext>
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-"
-                            "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+string(TOLOWER "${CMAKE_SYSTEM_NAME}" PKG_SYSNAME)
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" PKG_ARCH)
+
+string(CONCAT CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-"
+              "${CPACK_PACKAGE_VERSION}-" "${PKG_SYSNAME}-" "${PKG_ARCH}")
 
 # (опционально) человекочитаемые поля
 set(CPACK_PACKAGE_VENDOR "nikkikom")
