@@ -51,7 +51,6 @@ jobs:
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             cpack -G ZIP -B "$PWD/pack"
           else
-            cpack -G ZIP -B "$PWD/pack"
             cpack -G TGZ -B "$PWD/pack"
           fi
 
