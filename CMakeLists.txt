@@ -258,8 +258,8 @@ set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK ON)
 
 # --- Windows (MSI/NSIS) ---
 # Для WIX:
-set(CPACK_WIX_LICENSE_RTF "${CMAKE_SOURCE_DIR}/cmake/wix/LICENSE.rtf"
-)# опционально
+set(CPACK_WIX_LICENSE_RTF "${CMAKE_SOURCE_DIR}/cmake/wix/LICENSE.rtf")
+# опционально
 set(CPACK_WIX_UPGRADE_GUID "0D22BD85-590A-499C-A23A-19315EED2B01")
 
 # У WiX должна быть чистая числовая версия. Возьми её из project() даже если
